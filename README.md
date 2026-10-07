@@ -49,6 +49,11 @@ DNPScop Master is organized as a tree: **Channels → RTUs → Points**.
 - **TCP, UDP, and Serial channels** — connect over DNP3-over-TCP, DNP3-over-UDP,
   or a serial line, chosen per channel; multiple RTUs per channel with per-RTU
   link addresses; automatic 5-second reconnect for TCP and serial.
+- **DNP3 over TLS** — any TCP channel can be secured with TLS 1.2 / 1.3 (the
+  IEEE 1815 transport-security model, default port 19999): CA certificate,
+  own client certificate + key for mutual authentication, peer-name check and
+  minimum version in **Channel Settings → Security (TLS)**. See
+  [Security (TLS)](#security-tls).
 - **Per-RTU message schedule** — a live, editable **Messages** window with four
   phases: **Communication Start** (a response-gated, ordered one-shot sequence
   such as Reset Link → Class 0 read → Clear Restart → Enable Unsolicited),
@@ -62,6 +67,12 @@ DNPScop Master is organized as a tree: **Channels → RTUs → Points**.
   3 and combinations), group/variation reads (g1, g3, g10, g20, g21, g30, g40
   with every standard variation), Enable / Disable Unsolicited per class
   combination, Clear Restart, Cold Restart, and Write Time (time sync).
+- **Charts** — **View → Charts** opens a tabbed chart window: right-click any
+  mapped point (or use **Add point…**) to trend measurands on up to three Y axes
+  in engineering units, and binaries / double-bits as stepped 0/1 traces. Live
+  follow with 30 s – 24 h windows or free pan/zoom, hover readout with quality,
+  bad-quality shading, continuous CSV recording with rotation, CSV export, and
+  chart definitions saved with the workspace.
 - **Controls** — operate Binary Outputs with **CROB** (Latch On/Off, Pulse On/Off,
   Trip, Close, with count and on/off times) and Analog Outputs as 16-bit, 32-bit,
   or float, in **Direct Operate**, **Direct Operate (no ack)**, or
@@ -95,6 +106,32 @@ DNPScop Master is organized as a tree: **Channels → RTUs → Points**.
   with scaling. Recent workspaces are one click away.
 - **Themes** — dark / light / classic with a customizable accent color, DPI
   scaling, and always-on-top; layout and preferences are remembered between runs.
+
+## Security (TLS)
+
+DNPScop Master connects to an outstation over **DNP3 over TLS** when *Security
+(TLS)* is enabled on the channel — the DNP3 frames are unchanged, only the TCP
+connection is authenticated and encrypted (IEEE 1815 transport security, port
+19999 by convention; the dialog offers to switch to it).
+
+Fields on the master channel: *CA certificate* (the CA that signed the
+outstation's certificate), *Certificate* + *Key* (your own client certificate,
+presented when the outstation requires client authentication), optional key
+password, *Peer name* (the host name or IP the outstation's certificate must
+carry — leave empty to accept any name signed by the CA), *Minimum TLS version*
+and an optional cipher list. **Test certificates** checks the files before you
+start; **Generate lab certificates…** writes a complete lab set (CA, server,
+client) for a test bench, as does `tools\New-ScopLabCerts.ps1`.
+
+Lab bench in four steps: generate the set with the outstation's host name / IP as
+the server name → on the outstation (DNPScop Slave, or any DNP3-over-TLS device)
+install `ca.pem`, `server.pem`, `server-key.pem` → on this master enable TLS,
+`ca.pem` / `client.pem` / `client-key.pem`, *Peer name* = the outstation's name →
+**Start**. The status log shows `TLS established with host:19999: TLSv1.3,
+<cipher>, peer CN=…`, the channel label reads `TLS host:19999` with the version,
+and the Communication Monitor carries the same line as a notice row. A failed
+handshake is logged with OpenSSL's reason and the channel keeps retrying like
+any other connection failure.
 
 ## Download & run
 
@@ -139,6 +176,7 @@ license:
 | GLFW 3 | window / OpenGL context | Zlib/libpng |
 | OpenGL 3 | rendering | — |
 | Asio (standalone) | DNP3 TCP / UDP / serial transport | Boost Software License 1.0 |
+| OpenSSL 3 | TLS for every TCP channel (statically linked) | Apache License 2.0 |
 | stb_image | logo / splash decoding | MIT / public domain |
 
 The DNP3 protocol stack itself (link / transport / application layers, request
